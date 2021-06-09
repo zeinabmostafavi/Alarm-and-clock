@@ -8,6 +8,7 @@ from playsound import playsound
 from datetime import datetime
 import time
 from functools import partial
+from win10toast import ToastNotifier
 
 
 class Main(QWidget):
@@ -16,7 +17,6 @@ class Main(QWidget):
 
         loader = QUiLoader()
         self.ui = loader.load('form.ui')
-
         self.ui.btn_stopwatch_start.clicked.connect(self.startStopWatch)
         self.ui.btn_stopwatch_pause.clicked.connect(self.pauseStopWatch)
         self.ui.btn_stopwatch_stop.clicked.connect(self.stopStopWatch)
@@ -32,8 +32,9 @@ class Main(QWidget):
             self.stopStopWatchtimer)
 
         # _______________________________________________________________________
+
         self.timer = Timer()
-        self.timerr = Timerr()
+
         self.ui.show()
 
     def pauseStopWatch(self):
@@ -55,7 +56,6 @@ class Main(QWidget):
 # ________________Alarm______________
     def addalarm(self):
         self.alarm = Alarm()
-        self.alarm.addalarm()
         self.alarm.start()
 
 
@@ -70,6 +70,9 @@ class Main(QWidget):
         widget.ui.lbl_stopwatch_timer.setText("00:00:00")
 
     def startStopWatchtimer(self):
+        self.timerr = Timerr(self.ui.spinbox_ht.value(),
+                             self.ui.spinbox_mt.value(),
+                             self.ui.spinbox_st.value())
         self.timerr.start()
 
 
@@ -105,11 +108,11 @@ class Timer(QThread):
 
 
 class Timerr(QThread):
-    def __init__(self):
+    def __init__(self, h, m, s):
         QThread.__init__(self)
-        self.st = 0
-        self.mt = 0
-        self.ht = 0
+        self.st = h
+        self.mt = m
+        self.ht = s
 
     def reset(self):
         self.st = 0
@@ -117,9 +120,6 @@ class Timerr(QThread):
         self.ht = 0
 
     def decrease(self):
-        self.st = widget.ui.spinbox_st.value()
-        self.mt = widget.ui.spinbox_mt.value()
-        self.ht = widget.ui.spinbox_ht.value()
 
         if self.ht == 0 and self.mt == 0 and self.st == 0:
             return
@@ -131,6 +131,7 @@ class Timerr(QThread):
         if self.mt == 0 and self.ht > 0:
             self.mt = 59
             self.ht -= 1
+
         self.st -= 1
 
     def run(self):
@@ -147,24 +148,21 @@ class Timerr(QThread):
 class Alarm(QThread):
     def __init__(self):
         QThread.__init__(self)
-        self.hour = 0
-        self.minute = 0
-
-    def addalarm(self):
         self.hour = widget.ui.spinbox_h.value()
         self.minute = widget.ui.spinbox_m.value()
+        self.toast = ToastNotifier()
 
     def run(self):
-        now = datetime.now()
-        now_time = now.strftime("%H:%M:%S")
-        time_now = now_time.split(':')
+        while True:
+            now = datetime.now()
+            now_time = now.strftime("%H:%M:%S")
+            time_now = now_time.split(':')
+            if self.hour == int(time_now[0]) and self.minute == int(time_now[1]):
+                self.toast.show_toast(
+                    "Timer ", "wake up", "duration=10")
+                playsound("alarm.mp3")
 
-        if self.hour == int(time_now[0]) and self.minute == int(time_now[1]):
-            msg_box = QMessageBox()
-            msg_box("pashoooo")
-            msg_box.exec_()
-
-        time.sleep(1)
+            time.sleep(1)
 
 
 if __name__ == "__main__":
